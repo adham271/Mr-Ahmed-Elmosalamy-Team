@@ -1,0 +1,8 @@
+{
+  "name": "notion-student-tracker",
+  "version": "2.0.0",
+  "private": true,
+  "dependencies": {
+    "@notionhq/client": "^2.2.15"
+  }
+}

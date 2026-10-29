@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Student Monitoring Portal - Mr. Ahmed El Mosalamy</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>body{font-family:'Cairo',sans-serif;background:#f3f4f6}</style>
+</head>
+<body class="min-h-screen pb-12">
+  <header class="bg-gradient-to-l from-blue-900 to-indigo-800 text-white shadow-lg py-8 px-4 mb-8 relative">
+    <button id="teacherBtn" onclick="teacherToggle()" class="absolute top-3 right-3 text-xs bg-white/20 hover:bg-white/30 px-3 py-1 rounded-lg font-bold">Teacher Login</button>
+    <div class="max-w-5xl mx-auto text-center">
+      <h1 class="text-3xl md:text-4xl font-extrabold mb-2">Mr. Ahmed El Mosalamy Math Team</h1>
+      <p class="text-blue-200 text-lg">Academic Monitoring Portal and Instant Performance Reports</p>
+    </div>
+  </header>
+
+  <main class="max-w-5xl mx-auto px-4 space-y-6">
+    <div class="bg-white rounded-2xl shadow-md p-6 border border-gray-100">
+      <div class="flex flex-col sm:flex-row gap-3">
+        <input id="code" placeholder="Student Code (e.g. HR1)" onkeypress="if(event.key==='Enter')search()" class="flex-1 border-2 border-gray-300 rounded-xl px-4 py-3 text-lg focus:outline-none focus:border-indigo-600 uppercase">
+        <input id="pin" placeholder="PIN" inputmode="numeric" onkeypress="if(event.key==='Enter')search()" class="sm:w-40 border-2 border-gray-300 rounded-xl px-4 py-3 text-lg focus:outline-none focus:border-indigo-600">
+        <button onclick="search()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-8 py-3 rounded-xl shadow-md">View Report 📊</button>
+      </div>
+      <p id="hint" class="text-gray-500 text-sm mt-2">The PIN is the last 4 digits of the parent's phone number.</p>
+      <p id="msg" class="mt-3 font-semibold hidden"></p>
+    </div>
+
+    <div id="report" class="hidden space-y-6">
+      <div class="bg-white rounded-2xl shadow-md p-6 border-l-8 border-indigo-600 flex flex-col md:flex-row justify-between md:items-center gap-4">
+        <div>
+          <span id="school" class="bg-indigo-100 text-indigo-800 text-xs font-bold px-3 py-1 rounded-full"></span>
+          <h2 id="name" class="text-2xl font-extrabold text-gray-800 mt-2"></h2>
+          <p class="text-gray-500 font-semibold mt-1">Student Code: <span id="codeOut" class="text-indigo-700 font-bold"></span></p>
+        </div>
+        <div class="flex items-center gap-3">
+          <div class="flex gap-4 bg-gray-50 p-4 rounded-xl border">
+            <div class="text-center"><p class="text-xs text-gray-500 font-bold">Quiz Average</p><p id="qAvg" class="text-2xl font-extrabold text-indigo-600">--%</p></div>
+            <div class="border-l border-gray-300"></div>
+            <div class="text-center"><p class="text-xs text-gray-500 font-bold">Homework Average</p><p id="hAvg" class="text-2xl font-extrabold text-emerald-600">--%</p></div>
+          </div>
+          <div class="flex gap-2" data-html2canvas-ignore="true">
+            <a id="waBtn" target="_blank" rel="noopener" class="hidden bg-emerald-500 hover:bg-emerald-600 text-white font-bold px-4 py-4 rounded-xl shadow-md" title="Send via WhatsApp">WhatsApp</a>
+            <button onclick="pdf()" class="bg-indigo-500 hover:bg-indigo-600 text-white font-bold px-4 py-4 rounded-xl shadow-md" title="Download PDF">PDF ⬇</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="alerts" class="hidden bg-red-50 border-l-8 border-red-500 rounded-2xl shadow-md p-6">
+        <h3 class="text-xl font-bold text-red-800 mb-3">⚠️ Urgent Attention Required</h3>
+        <ul id="alertList" class="space-y-1 text-red-700 font-semibold list-disc list-inside"></ul>
+      </div>
+
+      <div class="bg-white rounded-2xl shadow-md p-6">
+        <h3 class="text-xl font-bold text-gray-800 mb-4 pb-2 border-b">📈 Performance Overview <span class="text-xs font-semibold text-gray-400">(blue = quizzes, green = homework)</span></h3>
+        <div class="h-64"><canvas id="chart"></canvas></div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="bg-white rounded-2xl shadow-md p-6"><h3 class="text-xl font-bold text-gray-800 mb-4 pb-2 border-b">📝 Quizzes & Mocks</h3><div id="qList" class="space-y-3"></div></div>
+        <div class="bg-white rounded-2xl shadow-md p-6"><h3 class="text-xl font-bold text-gray-800 mb-4 pb-2 border-b">📚 Homework Tracking</h3><div id="hList" class="space-y-3"></div></div>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-2xl shadow-md p-6">
+      <h3 class="text-xl font-bold text-gray-800 mb-4 pb-2 border-b">🏆 Quiz 1 Leaderboard (Top 10)</h3>
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-sm font-semibold text-gray-600">
+          <thead><tr class="bg-gray-50 uppercase"><th class="py-3 px-4 text-center">Rank</th><th class="py-3 px-4">Code</th><th class="py-3 px-4">Group</th><th class="py-3 px-4 text-center">Score</th></tr></thead>
+          <tbody id="lb"></tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const $ = id => document.getElementById(id);
+    const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    let tpw = sessionStorage.getItem('tpw') || '', chart = null, phone = '', summary = '', curCode = '';
+    const H = () => tpw ? { 'x-teacher-password': tpw } : {};
+
+    function msg(t, err = true) {
+      const e = $('msg');
+      e.textContent = t;
+      e.className = 'mt-3 font-semibold block ' + (err ? 'text-red-600' : 'text-indigo-600');
+    }
+
+    function applyMode() {
+      $('teacherBtn').textContent = tpw ? 'Teacher mode ✓ (Log out)' : 'Teacher Login';
+      $('pin').classList.toggle('hidden', !!tpw);
+      $('hint').classList.toggle('hidden', !!tpw);
+      if (curCode && tpw) search();
+    }
+
+    async function teacherToggle() {
+      if (tpw) { tpw = ''; sessionStorage.removeItem('tpw'); $('report').classList.add('hidden'); applyMode(); loadLB(); return; }
+      const p = prompt('Teacher password:');
+      if (!p) return;
+      const r = await fetch('/api/leaderboard', { headers: { 'x-teacher-password': p } });
+      if (r.ok) { tpw = p; sessionStorage.setItem('tpw', p); applyMode(); loadLB(); }
+      else alert('Incorrect password');
+    }
+
+    async function search() {
+      const code = $('code').value.trim().toUpperCase(), pin = $('pin').value.trim();
+      if (!code || (!tpw && !pin)) return msg('Please enter the student code' + (tpw ? '.' : ' and the PIN.'));
+      msg('Loading report...', false);
+      try {
+        const r = await fetch(`/api/student?code=${encodeURIComponent(code)}&pin=${encodeURIComponent(pin)}`, { headers: H() });
+        const j = await r.json();
+        if (!r.ok) { $('report').classList.add('hidden'); return msg(j.error || 'Error.'); }
+        $('msg').classList.add('hidden');
+        curCode = code;
+        render(j);
+      } catch { msg('Connection error. Please try again.'); }
+    }
+
+    function render(j) {
+      phone = j.phone || '';
+      const al = [], html = { quiz: '', hw: '' }, sum = { quiz: [], hw: [] };
+      const tot = { quiz: [0, 0], hw: [0, 0] }, lab = [], dat = [], col = [];
+      const add = (type, r) => {
+        const p = r.pct;
+        if (p !== null) {
+          tot[type][0] += p; tot[type][1]++;
+          lab.push(r.title); dat.push(p); col.push(type === 'quiz' ? '#4f46e5' : '#10b981');
+          if (p < 65) al.push(`Low score in ${r.title}: ${p}%`);
+        }
+        const bc = p === null ? 'bg-blue-50 text-blue-800 border-blue-200' : p >= 85 ? 'bg-emerald-100 text-emerald-800 border-emerald-300' : p >= 65 ? 'bg-amber-100 text-amber-800 border-amber-300' : 'bg-red-100 text-red-800 border-red-300';
+        const t = (r.s !== null && r.f ? `${r.s} / ${r.f}` : '-') + (p !== null ? ` (${p}%)` : '');
+        sum[type].push(`${r.title}: ${t}${r.status ? ' - ' + r.status : ''}`);
+        html[type] += `<div class="p-4 rounded-xl border bg-gray-50 flex flex-col gap-2 shadow-sm">
+          <div class="flex justify-between items-center"><span class="font-bold text-gray-800">${esc(r.title)}</span>
+          <span class="px-3 py-1 rounded-lg text-sm font-bold border ${bc}">${esc(t)}</span></div>
+          ${r.status ? `<p class="text-xs text-gray-600 font-semibold">Status: ${esc(r.status)}</p>` : ''}
+          ${r.note ? `<p class="text-xs bg-white p-2 rounded border text-indigo-700 font-semibold">💬 Note: ${esc(r.note)}</p>` : ''}</div>`;
+      };
+      j.quizzes.forEach(r => add('quiz', r));
+      j.homework.forEach(r => add('hw', r));
+      [...j.missing.quizzes, ...j.missing.homework].forEach(t => al.push('No record / not submitted: ' + t));
+
+      const avg = t => t[1] ? Math.round(t[0] / t[1]) + '%' : '--%';
+      const { name, code, school } = j.student;
+      $('name').textContent = name || 'Not Registered';
+      $('codeOut').textContent = code;
+      $('school').textContent = school || 'Grade 10';
+      $('qAvg').textContent = avg(tot.quiz);
+      $('hAvg').textContent = avg(tot.hw);
+      $('qList').innerHTML = html.quiz || '<p class="text-gray-400 text-sm">No quiz grades yet.</p>';
+      $('hList').innerHTML = html.hw || '<p class="text-gray-400 text-sm">No homework grades yet.</p>';
+      $('alertList').innerHTML = al.map(x => `<li>${esc(x)}</li>`).join('');
+      $('alerts').classList.toggle('hidden', !al.length);
+      $('report').classList.remove('hidden');
+
+      if (chart) chart.destroy();
+      chart = new Chart($('chart').getContext('2d'), {
+        type: 'bar',
+        data: { labels: lab, datasets: [{ data: dat, backgroundColor: col, borderRadius: 8 }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
+          scales: { y: { min: 0, max: 100, ticks: { callback: v => v + '%' } } } }
+      });
+
+      summary = `Mr. Ahmed El Mosalamy Math Team\nStudent: ${name} (${code})\nQuiz average: ${avg(tot.quiz)}\nHomework average: ${avg(tot.hw)}\n\nQuizzes & Mocks:\n${sum.quiz.join('\n') || '-'}\n\nHomework:\n${sum.hw.join('\n') || '-'}` +
+        (al.length ? `\n\nAlerts:\n- ${al.join('\n- ')}` : '');
+
+      const wa = $('waBtn');
+      let d = phone.replace(/\D/g, '');
+      if (d.startsWith('0')) d = '20' + d.slice(1);
+      if (tpw && d) { wa.href = `https://wa.me/${d}?text=${encodeURIComponent(summary)}`; wa.classList.remove('hidden'); }
+      else wa.classList.add('hidden');
+    }
+
+    function pdf() {
+      html2pdf().set({ margin: 8, filename: `${curCode}-report.pdf`, html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4' } })
+        .from($('report')).save();
+    }
+
+    async function loadLB() {
+      try {
+        const r = await fetch('/api/leaderboard', { headers: H() });
+        const j = await r.json();
+        $('lb').innerHTML = (j.top || []).map((x, i) => `<tr class="border-b"><td class="py-3 px-4 text-center">${['🥇','🥈','🥉'][i] || i + 1}</td><td class="py-3 px-4">${esc(x.code)}</td><td class="py-3 px-4">${esc(x.school)}</td><td class="py-3 px-4 text-center text-indigo-700">${x.pct}%</td></tr>`).join('')
+          || '<tr><td colspan="4" class="py-4 text-center text-gray-400">No data yet.</td></tr>';
+      } catch { $('lb').innerHTML = '<tr><td colspan="4" class="py-4 text-center text-gray-400">Could not load leaderboard.</td></tr>'; }
+    }
+
+    applyMode();
+    loadLB();
+  </script>
+</body>
+</html>
